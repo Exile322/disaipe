@@ -8,18 +8,24 @@
 		<Build>
 			<Target title="Debug">
 				<Option output="di_irr_meshbuffer" prefix_auto="1" extension_auto="1" />
-				<Option working_dir="./" />
-				<Option object_output="./src/obj/Debug/" />
+				<Option working_dir=".\" />
+				<Option object_output=".\src\obj\Debug\" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
+				<Linker>
+					<Add library="GL" />
+					<Add library="GLU" />
+					<Add library="Xxf86vm" />
+					<Add library="X11" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="di_irr_meshbuffer" prefix_auto="1" extension_auto="1" />
-				<Option working_dir="./" />
-				<Option object_output="./src/obj/Release/" />
+				<Option working_dir=".\" />
+				<Option object_output=".\src\obj\Release\" />
 				<Option type="0" />
 				<Option compiler="gcc" />
 				<Compiler>
@@ -27,32 +33,43 @@
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
+					<Add library="GL" />
+					<Add library="GLU" />
+					<Add library="Xxf86vm" />
+					<Add library="X11" />
 				</Linker>
+			</Target>
+			<Target title="Windows_D">
+				<Option platforms="Windows;" />
+				<Option output="di_irr_meshbuffer" prefix_auto="0" extension_auto="1" />
+				<Option working_dir=".\" />
+				<Option object_output=".\src\obj\Debug\" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
 			<Add directory="$(#irr.include)" />
-			<Add directory="src/" />
+			<Add directory="src\" />
 		</Compiler>
 		<Linker>
 			<Add library="Irrlicht" />
-			<Add library="GL" />
-			<Add library="GLU" />
-			<Add library="Xxf86vm" />
-			<Add library="X11" />
 			<Add directory="$(#irr.lib)" />
 		</Linker>
 		<Unit filename="main.cpp" />
-		<Unit filename="src/cDevice.h" />
-		<Unit filename="src/cDiMeshBuffer.h" />
-		<Unit filename="src/cFlags.h" />
-		<Unit filename="src/cGlobalMatrix.h" />
-		<Unit filename="src/cLogger.h" />
-		<Unit filename="src/cReceiver.h" />
-		<Unit filename="src/cSurfaceGenerator.h" />
-		<Unit filename="src/cUtilities.h" />
-		<Unit filename="src/defines.h" />
+		<Unit filename="src\cDevice.h" />
+		<Unit filename="src\cDiMeshBuffer.h" />
+		<Unit filename="src\cFlags.h" />
+		<Unit filename="src\cGlobalMatrix.h" />
+		<Unit filename="src\cLogger.h" />
+		<Unit filename="src\cReceiver.h" />
+		<Unit filename="src\cSurfaceGenerator.h" />
+		<Unit filename="src\cUtilities.h" />
+		<Unit filename="src\defines.h" />
 		<Unit filename="version.h" />
 		<Extensions>
 			<code_completion />

@@ -1,35 +1,35 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <CodeBlocks_layout_file>
-	<ActiveTarget name="Debug" />
-	<File name="main.cpp" open="1" top="0" tabpos="1">
-		<Cursor position="4281" topLine="105" />
+	<ActiveTarget name="Windows_D" />
+	<File name="main.cpp" open="1" top="1" tabpos="1">
+		<Cursor position="5292" topLine="99" />
 	</File>
-	<File name="src/cDevice.h" open="0" top="0" tabpos="7">
-		<Cursor position="1040" topLine="22" />
+	<File name="src\cDevice.h" open="1" top="0" tabpos="4">
+		<Cursor position="683" topLine="0" />
 	</File>
-	<File name="src/cDiMeshBuffer.h" open="1" top="1" tabpos="2">
-		<Cursor position="5336" topLine="98" />
+	<File name="src\cDiMeshBuffer.h" open="1" top="0" tabpos="2">
+		<Cursor position="2527" topLine="31" />
 	</File>
-	<File name="src/cFlags.h" open="0" top="0" tabpos="4">
+	<File name="src\cFlags.h" open="0" top="0" tabpos="4">
 		<Cursor position="1366" topLine="1" />
 	</File>
-	<File name="src/cGlobalMatrix.h" open="0" top="0" tabpos="0">
-		<Cursor position="483" topLine="7" />
+	<File name="src\cGlobalMatrix.h" open="0" top="0" tabpos="6">
+		<Cursor position="380" topLine="0" />
 	</File>
-	<File name="src/cLogger.h" open="0" top="0" tabpos="6">
+	<File name="src\cLogger.h" open="0" top="0" tabpos="6">
 		<Cursor position="822" topLine="25" />
 	</File>
-	<File name="src/cReceiver.h" open="0" top="0" tabpos="4">
+	<File name="src\cReceiver.h" open="0" top="0" tabpos="4">
 		<Cursor position="2839" topLine="11" />
 	</File>
-	<File name="src/cSurfaceGenerator.h" open="0" top="0" tabpos="4">
+	<File name="src\cSurfaceGenerator.h" open="0" top="0" tabpos="4">
 		<Cursor position="78" topLine="9" />
 	</File>
-	<File name="src/cUtilities.h" open="1" top="0" tabpos="4">
-		<Cursor position="1224" topLine="19" />
+	<File name="src\cUtilities.h" open="0" top="0" tabpos="4">
+		<Cursor position="1250" topLine="12" />
 	</File>
-	<File name="src/defines.h" open="1" top="0" tabpos="3">
-		<Cursor position="746" topLine="15" />
+	<File name="src\defines.h" open="1" top="0" tabpos="3">
+		<Cursor position="790" topLine="0" />
 	</File>
 	<File name="version.h" open="0" top="0" tabpos="4">
 		<Cursor position="611" topLine="0" />

@@ -31,7 +31,7 @@ namespace Di
 
             int init()
             {
-                device = createDevice(EDT_OPENGL, dimension2du(640, 480), 16, false, false, false, 0);
+                device = createDevice(EDT_OPENGL, dimension2du(640, 480), 32, false, false, false, 0);
                 if (!device)  return ERR_DEVICE;
 
                 driver = device->getVideoDriver();

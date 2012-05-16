@@ -58,11 +58,15 @@ namespace Di
                 isUsed = false;
 
                 //настройка материала
-                mb_material.setTexture(0,dev->driver->getTexture("textures/plane.jpg"));
+                mb_material.setTexture(0,dev->driver->getTexture("textures/terrain.png"));
                 mb_material.setFlag(EMF_LIGHTING, false);
-                mb_material.setFlag(EMF_WIREFRAME,false);
+
+                mb_material.TextureLayer[0].TextureWrapU = ETC_REPEAT;
+                mb_material.TextureLayer[0].TextureWrapV = ETC_REPEAT;
 
                 mb_storage->Material = mb_material;
+
+                textureId = vector2di(3,10); //столбец,строка
             }
 
             virtual ~cDiMeshBuffer() {}
@@ -75,13 +79,14 @@ namespace Di
             u32 i_quant; //кол-во индексов в оригинальном буфере
 
             vector3di Id; //позиция чанка в мире
+            vector2di textureId;
 
             bool isUsed;
 
             array<int> v_shifts; //индекс первой вершины объекта в хранилище mb_storage.vertices
             array<int> i_shifts; //индекс первой поверхности объекта в хранилище mb_storage.indicies
 
-            boost::array<boost::array<boost::array<int,PARAM_CHUNK_HEIGHT>,PARAM_CHUNK_SIZE>,PARAM_CHUNK_SIZE> matrix; //матрица чанка
+            boost::array<boost::array<boost::array<u32,PARAM_CHUNK_HEIGHT>,PARAM_CHUNK_SIZE>,PARAM_CHUNK_SIZE> matrix; //матрица чанка
             boost::array<boost::array<boost::array<int,PARAM_CHUNK_HEIGHT>,PARAM_CHUNK_SIZE>,PARAM_CHUNK_SIZE> NShifts; //массивы адресов вершин плоскостей
             boost::array<boost::array<boost::array<int,PARAM_CHUNK_HEIGHT>,PARAM_CHUNK_SIZE>,PARAM_CHUNK_SIZE> SShifts;
             boost::array<boost::array<boost::array<int,PARAM_CHUNK_HEIGHT>,PARAM_CHUNK_SIZE>,PARAM_CHUNK_SIZE> WShifts;
@@ -110,7 +115,7 @@ namespace Di
                             int xs = sqrt(pow(R,2) - pow(z-displace.Z,2) - pow(y-displace.Y,2)) + displace.X;
                             int zs = sqrt(pow(R,2) - pow(x-displace.X,2) - pow(y-displace.Y,2)) + displace.Z;
                             int ys = sqrt(pow(R,2) - pow(z-displace.Z,2) - pow(x-displace.X,2)) + displace.Y;
-                            if (x <= xs && z <= zs && y <= ys/* && (u32)xs>R && (u32)ys>R && (u32)zs>R*/)
+                            if (x <= xs && z <= zs && y <= ys)
                                 matrix[x][z][y] = M;
 
                             //заодно обнулим смещения вершин
@@ -166,10 +171,10 @@ namespace Di
             {
                 //генерация тестовой матрицы
                 for (u32 x=0;x < PARAM_CHUNK_SIZE; x++)
-                    for (u32 y=0;y < PARAM_CHUNK_SIZE; y++)
-                        for (u32 z=0;z < PARAM_CHUNK_HEIGHT; z++)
+                    for (u32 z=0;z < PARAM_CHUNK_SIZE; z++)
+                        for (u32 y=0;y < PARAM_CHUNK_HEIGHT; y++)
                             {
-                                matrix[x][y][z]=rand()%2;
+                                matrix[x][z][y]=rand()%2;
 
                                 //заодно обнулим смещения вершин
                                 NShifts[x][z][y] = -1;
@@ -182,6 +187,33 @@ namespace Di
 
                 //зарегистрируем нашу матрицу
                 registerMatrix();
+            }
+
+            void generateFromHeightMap(IImage* hMap, float verticalRatio = 1.0f,vector2di displace=vector2di(0,0))
+            {
+                for (u32 x=0;x < PARAM_CHUNK_SIZE; x++)
+                    for (u32 z=0;z < PARAM_CHUNK_SIZE; z++)
+                    {
+                        SColor p = hMap->getPixel(x + displace.X,z + displace.Y);
+
+                        u32 cY = rint((p.getRed()+p.getGreen()+p.getBlue())/(verticalRatio*PARAM_CHUNK_HEIGHT));
+
+                        if (cY > PARAM_CHUNK_HEIGHT) return;
+
+                        matrix[x][z][cY] = 1;
+
+                        for (u32 y=0;y < PARAM_CHUNK_HEIGHT; y++)
+                        {
+                            if (y < cY) matrix[x][z][y] = 1;
+                            //заодно обнулим смещения вершин
+                            NShifts[x][z][y] = -1;
+                            SShifts[x][z][y] = -1;
+                            WShifts[x][z][y] = -1;
+                            EShifts[x][z][y] = -1;
+                            UShifts[x][z][y] = -1;
+                            DShifts[x][z][y] = -1;
+                        }
+                    }
             }
 
             //! Построение кубов по заданной матрице
@@ -324,7 +356,7 @@ namespace Di
 
                 if (DEBUG_INFO)
                 {
-                    ostringstream ss; ss <<"Mesh clonned: XYZ=" << x << "," << y << "," << z << " clones_count: " << v_shifts.size()  << " shifts_v/i=" << mb_storage->getVertexCount() << "/" << mb_storage->getIndexCount() << endl;
+                    ostringstream ss; ss <<"Mesh clonned: " << Id.X << "/" << Id.Y << "/" << Id.Z << " | XYZ=" << x << "," << y << "," << z << " clones_count: " << v_shifts.size()  << " shifts_v/i=" << mb_storage->getVertexCount() << "/" << mb_storage->getIndexCount() << endl;
                     dev->logger->write(ss.str().c_str());
                     cout << ss.str();
                 }
@@ -693,27 +725,27 @@ namespace Di
 
                     v0.Color.set(255, 255, 255, 255);
                     v0.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0, 0 - PARAM_BLOCK_SIZE/2);
-                    v0.TCoords.set(0,1);
+                    v0.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v1.Color.set(255, 255, 255, 255);
                     v1.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0, 0 + PARAM_BLOCK_SIZE/2);
-                    v1.TCoords.set(1,1);
+                    v1.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v2.Color.set(255, 255, 255, 255);
                     v2.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0, 0 + PARAM_BLOCK_SIZE/2);
-                    v2.TCoords.set(1,0);
+                    v2.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v3.Color.set(255, 255, 255, 255);
                     v3.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0, 0 - PARAM_BLOCK_SIZE/2);
-                    v3.TCoords.set(0,1);
+                    v3.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v4.Color.set(255, 255, 255, 255);
                     v4.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0, 0 + PARAM_BLOCK_SIZE/2);
-                    v4.TCoords.set(1,0);
+                    v4.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v5.Color.set(255, 255, 255, 255);
                     v5.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0, 0 - PARAM_BLOCK_SIZE/2);
-                    v5.TCoords.set(0,0);
+                    v5.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     mb->Vertices.push_back(v0);
                     mb->Vertices.push_back(v1);
@@ -747,27 +779,27 @@ namespace Di
 
                     v0.Color.set(255, 255, 255, 255);
                     v0.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 - PARAM_BLOCK_SIZE/2);
-                    v0.TCoords.set(0,1);
+                    v0.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v1.Color.set(255, 255, 255, 255);
                     v1.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 + PARAM_BLOCK_SIZE/2);
-                    v1.TCoords.set(1,1);
+                    v1.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v2.Color.set(255, 255, 255, 255);
                     v2.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 + PARAM_BLOCK_SIZE/2);
-                    v2.TCoords.set(1,0);
+                    v2.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v3.Color.set(255, 255, 255, 255);
                     v3.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 - PARAM_BLOCK_SIZE/2);
-                    v3.TCoords.set(0,1);
+                    v3.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v4.Color.set(255, 255, 255, 255);
                     v4.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 + PARAM_BLOCK_SIZE/2);
-                    v4.TCoords.set(1,0);
+                    v4.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v5.Color.set(255, 255, 255, 255);
                     v5.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 - PARAM_BLOCK_SIZE/2);
-                    v5.TCoords.set(0,0);
+                    v5.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     mb->Vertices.push_back(v0);
                     mb->Vertices.push_back(v1);
@@ -801,27 +833,27 @@ namespace Di
 
                     v0.Color.set(255, 255, 255, 255);
                     v0.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0, 0 - PARAM_BLOCK_SIZE/2);
-                    v0.TCoords.set(0,0);
+                    v0.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v1.Color.set(255, 255, 255, 255);
                     v1.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0, 0 + PARAM_BLOCK_SIZE/2);
-                    v1.TCoords.set(1,0);
+                    v1.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v2.Color.set(255, 255, 255, 255);
                     v2.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 + PARAM_BLOCK_SIZE/2);
-                    v2.TCoords.set(1,1);
+                    v2.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v3.Color.set(255, 255, 255, 255);
                     v3.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0, 0 - PARAM_BLOCK_SIZE/2);
-                    v3.TCoords.set(0,0);
+                    v3.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v4.Color.set(255, 255, 255, 255);
                     v4.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 + PARAM_BLOCK_SIZE/2);
-                    v4.TCoords.set(1,1);
+                    v4.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v5.Color.set(255, 255, 255, 255);
                     v5.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 - PARAM_BLOCK_SIZE/2);
-                    v5.TCoords.set(0,1);
+                    v5.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     mb->Vertices.push_back(v0);
                     mb->Vertices.push_back(v1);
@@ -855,27 +887,27 @@ namespace Di
 
                     v0.Color.set(255, 255, 255, 255);
                     v0.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0, 0 - PARAM_BLOCK_SIZE/2);
-                    v0.TCoords.set(1,0);
+                    v0.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v1.Color.set(255, 255, 255, 255);
                     v1.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0, 0 + PARAM_BLOCK_SIZE/2);
-                    v1.TCoords.set(0,0);
+                    v1.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v2.Color.set(255, 255, 255, 255);
                     v2.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 + PARAM_BLOCK_SIZE/2);
-                    v2.TCoords.set(0,1);
+                    v2.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v3.Color.set(255, 255, 255, 255);
                     v3.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0, 0 - PARAM_BLOCK_SIZE/2);
-                    v3.TCoords.set(1,0);
+                    v3.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v4.Color.set(255, 255, 255, 255);
                     v4.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 + PARAM_BLOCK_SIZE/2);
-                    v4.TCoords.set(0,1);
+                    v4.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v5.Color.set(255, 255, 255, 255);
                     v5.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 - PARAM_BLOCK_SIZE/2);
-                    v5.TCoords.set(1,1);
+                    v5.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     mb->Vertices.push_back(v0);
                     mb->Vertices.push_back(v1);
@@ -909,27 +941,27 @@ namespace Di
 
                     v0.Color.set(255, 255, 255, 255);
                     v0.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 + PARAM_BLOCK_SIZE/2);
-                    v0.TCoords.set(0,1);
+                    v0.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v1.Color.set(255, 255, 255, 255);
                     v1.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0, 0 + PARAM_BLOCK_SIZE/2);
-                    v1.TCoords.set(0,0);
+                    v1.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v2.Color.set(255, 255, 255, 255);
                     v2.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0, 0 + PARAM_BLOCK_SIZE/2);
-                    v2.TCoords.set(1,0);
+                    v2.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v3.Color.set(255, 255, 255, 255);
                     v3.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 + PARAM_BLOCK_SIZE/2);
-                    v3.TCoords.set(0,1);
+                    v3.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v4.Color.set(255, 255, 255, 255);
                     v4.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0, 0 + PARAM_BLOCK_SIZE/2);
-                    v4.TCoords.set(1,0);
+                    v4.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v5.Color.set(255, 255, 255, 255);
                     v5.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 + PARAM_BLOCK_SIZE/2);
-                    v5.TCoords.set(1,1);
+                    v5.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     mb->Vertices.push_back(v0);
                     mb->Vertices.push_back(v1);
@@ -963,27 +995,27 @@ namespace Di
 
                     v0.Color.set(255, 255, 255, 255);
                     v0.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 - PARAM_BLOCK_SIZE/2);
-                    v0.TCoords.set(1,1);
+                    v0.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v1.Color.set(255, 255, 255, 255);
                     v1.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0, 0 - PARAM_BLOCK_SIZE/2);
-                    v1.TCoords.set(1,0);
+                    v1.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v2.Color.set(255, 255, 255, 255);
                     v2.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0, 0 - PARAM_BLOCK_SIZE/2);
-                    v2.TCoords.set(0,0);
+                    v2.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v3.Color.set(255, 255, 255, 255);
                     v3.Pos.set(0 + PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 - PARAM_BLOCK_SIZE/2);
-                    v3.TCoords.set(1,1);
+                    v3.TCoords.set((float)textureId.X/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     v4.Color.set(255, 255, 255, 255);
                     v4.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0, 0 - PARAM_BLOCK_SIZE/2);
-                    v4.TCoords.set(0,0);
+                    v4.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)(textureId.Y-1)/PARAM_MULTITEX_COUNT);
 
                     v5.Color.set(255, 255, 255, 255);
                     v5.Pos.set(0 - PARAM_BLOCK_SIZE/2, 0 - PARAM_BLOCK_SIZE, 0 - PARAM_BLOCK_SIZE/2);
-                    v5.TCoords.set(0,1);
+                    v5.TCoords.set((float)(textureId.X-1)/PARAM_MULTITEX_COUNT,(float)textureId.Y/PARAM_MULTITEX_COUNT);
 
                     mb->Vertices.push_back(v0);
                     mb->Vertices.push_back(v1);
@@ -1169,7 +1201,7 @@ namespace Di
                     mb_storage->Indices.push_back(buf->Indices[i] + v_cnt);
                 }
 
-                mb_storage->setHardwareMappingHint(EHM_DYNAMIC);
+                mb_storage->setHardwareMappingHint(EHM_STREAM);
                 mb_storage->recalculateBoundingBox();
                 mb_storage->setDirty();
             }

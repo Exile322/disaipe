@@ -41,16 +41,27 @@ int main(int argc, char** argv)
                 mesh[x][z][y]->generateSphere(8,1,vector3di(7,7,7));
             }*/
     //! Пробная генерация сферы во весь мир
+    /*for (u32 x=0; x<PARAM_WORLD_SIZE_X; x++)
+        for (u32 z=0; z<PARAM_WORLD_SIZE_Z; z++)
+            for (u32 y=0; y<PARAM_WORLD_SIZE_Y; y++)
+            {
+                mesh[x][z][y] = new Di::cDiMeshBuffer(vector3di(x,y,z), &dev, &glMatrix, &flags);
+                u32 R = (PARAM_WORLD_SIZE_X*PARAM_CHUNK_SIZE)/2;
+                mesh[x][z][y]->generateSphere(R,1,vector3di(R-x*PARAM_CHUNK_SIZE,R-y*PARAM_CHUNK_HEIGHT,R-z*PARAM_CHUNK_SIZE));
+                mesh[x][z][y]->generateSphere(R/2,0,vector3di(R-x*PARAM_CHUNK_SIZE,R*2,R-z*PARAM_CHUNK_SIZE));
+            }*/
+
+    //! Пробная генерация ландшафта
+    IImage* img = dev.driver->createImageFromFile("textures/terrain-heightmap.bmp");
     for (u32 x=0; x<PARAM_WORLD_SIZE_X; x++)
         for (u32 z=0; z<PARAM_WORLD_SIZE_Z; z++)
             for (u32 y=0; y<PARAM_WORLD_SIZE_Y; y++)
             {
                 mesh[x][z][y] = new Di::cDiMeshBuffer(vector3di(x,y,z), &dev, &glMatrix, &flags);
-                u32 R = PARAM_WORLD_SIZE_X*PARAM_CHUNK_SIZE/2;
-                mesh[x][z][y]->generateSphere(R,1,vector3di(R-x*PARAM_CHUNK_SIZE,R-y*PARAM_CHUNK_HEIGHT,R-z*PARAM_CHUNK_SIZE));
             }
-
-
+    for (u32 x=0; x<PARAM_WORLD_SIZE_X; x++)
+        for (u32 z=0; z<PARAM_WORLD_SIZE_Z; z++)
+            mesh[x][z][0]->generateFromHeightMap(img,1.0f,vector2di(x*PARAM_CHUNK_SIZE,z*PARAM_CHUNK_SIZE));
     //mesh[0][0][0]->generateSphere(8,1,vector3di(7,7,7));
     //mesh[0][0][0]->generateSphere(5,0,vector3di(7,7,7));
     //mesh[0][0][1]->generateEllipse(8,8,8,vector3di(8,8,8));
@@ -81,6 +92,8 @@ int main(int argc, char** argv)
     ITriangleSelector* selector = 0;
 
     SMesh *surfaceMesh = new SMesh();
+    surfaceMesh->setHardwareMappingHint(EHM_STATIC);
+
     for (u32 x=0; x<PARAM_WORLD_SIZE_X; x++)
         for (u32 z=0; z<PARAM_WORLD_SIZE_Z; z++)
             for (u32 y=0; y<PARAM_WORLD_SIZE_Y; y++)
@@ -95,6 +108,19 @@ int main(int argc, char** argv)
     node->setTriangleSelector(selector);
     selector->drop();
 
+    // create skybox and skydome
+	dev.driver->setTextureCreationFlag(video::ETCF_CREATE_MIP_MAPS, false);
+
+	scene::ISceneNode* skybox=dev.smgr->addSkyBoxSceneNode(
+		dev.driver->getTexture("textures/irrlicht2_up.jpg"),
+		dev.driver->getTexture("textures/irrlicht2_dn.jpg"),
+		dev.driver->getTexture("textures/irrlicht2_lf.jpg"),
+		dev.driver->getTexture("textures/irrlicht2_rt.jpg"),
+		dev.driver->getTexture("textures/irrlicht2_ft.jpg"),
+		dev.driver->getTexture("textures/irrlicht2_bk.jpg"));
+
+	dev.driver->setTextureCreationFlag(video::ETCF_CREATE_MIP_MAPS, true);
+
     //Billboard
     scene::IBillboardSceneNode * bill = dev.smgr->addBillboardSceneNode();
     bill->setMaterialType(video::EMT_TRANSPARENT_ADD_COLOR );
@@ -107,6 +133,7 @@ int main(int argc, char** argv)
     camera->setPosition(vector3df(1,18,0));
     camera->setTarget(vector3df(0,0,0));
     camera->setNearValue(0.1f);
+    camera->setFarValue(200.0f);
     ISceneNodeAnimator* camAnim = dev.smgr->createCollisionResponseAnimator(selector,camera,vector3df(0.5f,0.5f,0.5f),vector3df(0,0,0));
     camera->addAnimator(camAnim);
     camAnim->drop();
@@ -117,17 +144,16 @@ int main(int argc, char** argv)
         //Обновление боундинг бокса мешбуффера
         if (flags.FMeshBoundingBoxReload)
         {
+            //Пересчитываем габаритные коробки всех мешбуферов
             for (u32 i=0; i < node->getMesh()->getMeshBufferCount(); i++)
-            {
                 node->getMesh()->getMeshBuffer(i)->recalculateBoundingBox();
-            }
 
+            //Складываем получившиеся короба вместе, получая общий габарит
             core::aabbox3df bbox;
             for (u32 i=0; i < node->getMesh()->getMeshBufferCount(); i++)
-            {
                 bbox.addInternalBox(node->getMesh()->getMeshBuffer(i)->getBoundingBox());
-            }
 
+            //Присваиваем полученный габиритный бокс ноде
             node->getMesh()->setBoundingBox(bbox);
 
             //Обновление селектора. Потерял около часа, искав причину "необновления" боундинг бокса. Я нуб :(
@@ -139,11 +165,14 @@ int main(int argc, char** argv)
             //для этого ищем устаревший аниматор, удаляем его и заменяем новым
             camAnim = dev.smgr->createCollisionResponseAnimator(selector,camera,vector3df(0.4f,0.4f,0.4f),vector3df(0,0,0));
             list<ISceneNodeAnimator*>::ConstIterator it = camera->getAnimators().begin();
+            ISceneNodeAnimator* anim;
             for (; it != camera->getAnimators().end(); ++it)
             {
+
                 if ((*it)->getType() == ESNAT_COLLISION_RESPONSE)
-                    camera->removeAnimator(*it);
+                    anim = *it;
             }
+            camera->removeAnimator(anim);
             camera->addAnimator(camAnim);
             camAnim->drop();
 
@@ -159,6 +188,7 @@ int main(int argc, char** argv)
             node->setDebugDataVisible(EDS_OFF);
         }
 
+        //Проверяем не нужно ли где сгенерировать недостоющие плоскости
         if (flags.getPlaneMakerSize() > 0)
         {
             for (u32 i=0; i<flags.getPlaneMakerSize();i++)
@@ -170,6 +200,8 @@ int main(int argc, char** argv)
             }
         }
 
+        //! ###################################################################################################################
+        //! Главный цикл
         dev.driver->beginScene(true, true, SColor(0,100,100,100));
 
             dev.smgr->drawAll();
@@ -200,6 +232,7 @@ int main(int argc, char** argv)
                 receiver.dropFlags();
             }
 
+            //Вывод данныъ матрицы выделеного чанка
             if (flags.FMeshCheckMatrix) mesh[cUtils.getChunkX(intersection)][cUtils.getChunkZ(intersection)][cUtils.getChunkY(intersection,camera->getAbsolutePosition())]->checkBuffer();
 
             stringw str;
@@ -208,6 +241,7 @@ int main(int argc, char** argv)
             str += " | Prim-es: "; str += dev.driver->getPrimitiveCountDrawn();
             str += " | Chunk: "; str += cUtils.getChunkX(intersection); str += "/"; str += cUtils.getChunkZ(intersection); str+= "/"; str+= cUtils.getChunkY(intersection,camera->getAbsolutePosition());
 
+            //Перемещение прицела на место курсора
             if(selectedSceneNode)
             {
                 bill->setPosition(intersection);

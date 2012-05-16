@@ -10,7 +10,7 @@ namespace Di
             virtual ~cGlobalMatrix() {}
 
             //!Регистрация матрицы чанка в общем реестре
-            void registerChunkMatrix(vector3di chunk , boost::array<boost::array<boost::array<int,PARAM_CHUNK_HEIGHT>,PARAM_CHUNK_SIZE>,PARAM_CHUNK_SIZE> *m)
+            void registerChunkMatrix(vector3di chunk , boost::array<boost::array<boost::array<u32,PARAM_CHUNK_HEIGHT>,PARAM_CHUNK_SIZE>,PARAM_CHUNK_SIZE> *m)
             {
                 globalMatrix[chunk.X][chunk.Z][chunk.Y].matrix = m;
                 globalMatrix[chunk.X][chunk.Z][chunk.Y].isUsed = true;
@@ -28,7 +28,7 @@ namespace Di
 
             struct SGlobalMatrix
             {
-                boost::array<boost::array<boost::array<int,PARAM_CHUNK_HEIGHT>,PARAM_CHUNK_SIZE>,PARAM_CHUNK_SIZE> *matrix;
+                boost::array<boost::array<boost::array<u32,PARAM_CHUNK_HEIGHT>,PARAM_CHUNK_SIZE>,PARAM_CHUNK_SIZE> *matrix;
                 bool isUsed;
 
                 SGlobalMatrix(): isUsed(false){};

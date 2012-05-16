@@ -30,7 +30,7 @@ namespace Di
                     return out;
                 else
                 {
-                    if (pos.Y < camPos.Y) out--;
+                    if (pos.Y < camPos.Y && out!=0) out--;
                     return out;
                 }
             }
