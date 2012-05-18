@@ -101,9 +101,9 @@ namespace Di
 
             void chechKeys()
             {
-                if (isKeyWasDown[KEY_KEY_W]) flags->FWireframe = !flags->FWireframe;
-                if (isKeyWasDown[KEY_KEY_H]) flags->FHalfTransparent = !flags->FHalfTransparent;
-                if (isKeyWasDown[KEY_KEY_B]) flags->FBoundingBox = !flags->FBoundingBox;
+                if (isKeyWasDown[KEYS_WIREWRAME]) flags->FWireframe = !flags->FWireframe;
+                if (isKeyWasDown[KEYS_HALF_TRANSPARENT]) flags->FHalfTransparent = !flags->FHalfTransparent;
+                if (isKeyWasDown[KEYS_BOUNDING_BOX]) flags->FBoundingBox = !flags->FBoundingBox;
                 if (isKeyWasDown[KEY_KEY_C]) flags->FMeshCheckMatrix = true;
 
                 memset(isKeyWasDown,false,sizeof(isKeyWasDown));

@@ -2,16 +2,16 @@
 <CodeBlocks_layout_file>
 	<ActiveTarget name="Windows_D" />
 	<File name="main.cpp" open="1" top="1" tabpos="1">
-		<Cursor position="13805" topLine="231" />
+		<Cursor position="6885" topLine="111" />
 	</File>
-	<File name="src\cDevice.h" open="1" top="0" tabpos="3">
+	<File name="src\cDevice.h" open="0" top="0" tabpos="3">
 		<Cursor position="1740" topLine="22" />
 	</File>
 	<File name="src\cDiMeshBuffer.h" open="0" top="0" tabpos="2">
-		<Cursor position="16761" topLine="327" />
+		<Cursor position="52088" topLine="1041" />
 	</File>
 	<File name="src\cFlags.h" open="0" top="0" tabpos="4">
-		<Cursor position="1366" topLine="1" />
+		<Cursor position="871" topLine="13" />
 	</File>
 	<File name="src\cGlobalMatrix.h" open="0" top="0" tabpos="6">
 		<Cursor position="380" topLine="0" />
@@ -19,17 +19,17 @@
 	<File name="src\cLogger.h" open="0" top="0" tabpos="6">
 		<Cursor position="822" topLine="25" />
 	</File>
-	<File name="src\cReceiver.h" open="0" top="0" tabpos="4">
-		<Cursor position="2839" topLine="11" />
+	<File name="src\cPerlinNoise.h" open="0" top="0" tabpos="0">
+		<Cursor position="48" topLine="0" />
 	</File>
-	<File name="src\cSurfaceGenerator.h" open="0" top="0" tabpos="4">
-		<Cursor position="78" topLine="9" />
+	<File name="src\cReceiver.h" open="0" top="0" tabpos="4">
+		<Cursor position="3973" topLine="61" />
 	</File>
 	<File name="src\cUtilities.h" open="0" top="0" tabpos="5">
-		<Cursor position="472" topLine="0" />
+		<Cursor position="532" topLine="0" />
 	</File>
 	<File name="src\defines.h" open="1" top="0" tabpos="2">
-		<Cursor position="2078" topLine="0" />
+		<Cursor position="135" topLine="0" />
 	</File>
 	<File name="version.h" open="0" top="0" tabpos="4">
 		<Cursor position="611" topLine="0" />

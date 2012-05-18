@@ -1,11 +1,11 @@
 #include "src/defines.h"
 #include "src/cDevice.h"
 #include "src/cDiMeshBuffer.h"
-#include "src/cSurfaceGenerator.h"
 #include "src/cReceiver.h"
 #include "src/cFlags.h"
 #include "src/cUtilities.h"
 #include "src/cGlobalMatrix.h"
+#include "src/cPerlinNoise.h"
 #include "version.h"
 
 #include <irrlicht.h>
@@ -25,6 +25,7 @@ int main(int argc, char** argv)
     Di::cFlags flags;
     Di::cChunkUtilities cUtils;
     Di::cGlobalMatrix glMatrix;
+    Di::cPerlinNoise perlinNoise;
 
     Di::cReceiver receiver;
     receiver.setup(&dev, &flags);
@@ -45,7 +46,18 @@ int main(int argc, char** argv)
             }*/
 
     //! Пробная генерация ландшафта
-    IImage* img = dev.driver->createImageFromFile("textures/terrain-heightmap.bmp");
+    //Генерация карты высот
+    IImage* img = dev.driver->createImage(ECF_A8R8G8B8,dimension2du(PERLIN_MAP_SIZE,PERLIN_MAP_SIZE));
+    for (u32 x = 0; x<PERLIN_MAP_SIZE; x++)
+        for (u32 z=0; z<PERLIN_MAP_SIZE; z++)
+        {
+            int n = perlinNoise.getPerlinNoise((float)x,(float)z,(rand()%101)/100);
+            SColor noise = SColor(n,n,n,n);
+            img->setPixel(x,z,noise);
+        }
+    dev.driver->writeImageToFile(img, "textures/heightmaps/previousMap.bmp");
+
+
     for (u32 x=0; x<PARAM_WORLD_SIZE_X; x++)
         for (u32 z=0; z<PARAM_WORLD_SIZE_Z; z++)
             for (u32 y=0; y<PARAM_WORLD_SIZE_Y; y++)
@@ -70,18 +82,6 @@ int main(int argc, char** argv)
     //mesh[0][0][0]->addOriginalMesh(0,"models/plane.3ds");
     //mesh[0][0][0]->addOriginalMesh(1,"models/edge1.3ds");
     //mesh[0][0][0]->addOriginalMesh(2,"models/edge2.3ds");
-
-    //cSurfaceGenerator generator;
-
-    /*array<u32> block = generator.smoothChunk(generator.generateChunk());
-    int b = 0;
-    for (int x=0; x<16;x++)
-        for (int z=0; z<16; z++)
-        {
-            mesh[0][0][0]->dublicateTo(block[b],x,0,z);
-            b++;
-        }
-    */
 
     //Подготовка мешей
     SMesh *surfaceMesh[PARAM_SECTIONS][PARAM_SECTIONS];
@@ -140,11 +140,22 @@ int main(int argc, char** argv)
     bill->setMaterialFlag(video::EMF_ZBUFFER, false);
     bill->setSize(core::dimension2d< f32 >(1.0f, 1.0f));
 
-    ICameraSceneNode* camera = dev.smgr->addCameraSceneNodeFPS(0,20,0.02f);
-    camera->setPosition(vector3df(1,18,0));
+    SKeyMap keyMap[5];
+    keyMap[0].Action = EKA_MOVE_FORWARD;
+    keyMap[0].KeyCode = KEYS_PLAYER_WALK_FWD;
+    keyMap[1].Action = EKA_MOVE_BACKWARD;
+    keyMap[1].KeyCode = KEYS_PLAYER_WALK_BCK;
+    keyMap[2].Action = EKA_STRAFE_LEFT;
+    keyMap[2].KeyCode = KEYS_PLAYER_STRAFE_L;
+    keyMap[3].Action = EKA_STRAFE_RIGHT;
+    keyMap[3].KeyCode = KEYS_PLAYER_STRAFE_R;
+    keyMap[4].Action = EKA_JUMP_UP;  //прыжок
+    keyMap[4].KeyCode = KEYS_PLAYER_JUMP;
+    ICameraSceneNode* camera = dev.smgr->addCameraSceneNodeFPS(0,20,0.02f,0,keyMap,5,false,3.f);
+    camera->setPosition(vector3df(5,18,5));
     camera->setTarget(vector3df(0,0,0));
     camera->setNearValue(0.1f);
-    camera->setFarValue(200.0f);
+    camera->setFarValue(2000.0f);
     ISceneNodeAnimator* camAnim = dev.smgr->createCollisionResponseAnimator(dev.metaSelector,camera,vector3df(0.5f,0.5f,0.5f),vector3df(0,0,0));
     camera->addAnimator(camAnim);
     camAnim->drop();

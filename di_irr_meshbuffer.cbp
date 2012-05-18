@@ -66,8 +66,8 @@
 		<Unit filename="src\cFlags.h" />
 		<Unit filename="src\cGlobalMatrix.h" />
 		<Unit filename="src\cLogger.h" />
+		<Unit filename="src\cPerlinNoise.h" />
 		<Unit filename="src\cReceiver.h" />
-		<Unit filename="src\cSurfaceGenerator.h" />
 		<Unit filename="src\cUtilities.h" />
 		<Unit filename="src\defines.h" />
 		<Unit filename="version.h" />

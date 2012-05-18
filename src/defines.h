@@ -22,6 +22,10 @@ using namespace gui;
 #define DEVICE_MOUSE_PRESS_DELAY        15
 #define PARAM_MULTITEX_COUNT            16
 
+//! Параметры генератора ландшафта
+#define PERLIN_NOISE_OCTAVES            8
+#define PERLIN_MAP_SIZE                 PARAM_WORLD_SIZE_X*PARAM_CHUNK_SIZE//256     //Размер карты высот
+
 //! Параметры
 /*
     Что мы имеем? Мы имеем мир (WORLD), разделенный на секции (SECTIONS),
@@ -35,13 +39,23 @@ using namespace gui;
     Размерность CHUNKS вычисляется по ширине, глубине и высоте (X,Z,Y).
 */
 #define PARAM_MBORIGINAL_COUNT          4
-#define PARAM_WORLD_SIZE_X              4      //Количество чанков в мире по оси Х
-#define PARAM_WORLD_SIZE_Z              4      //Количество чанков в мире по оси Z
+#define PARAM_WORLD_SIZE_X              8      //Количество чанков в мире по оси Х
+#define PARAM_WORLD_SIZE_Z              8      //Количество чанков в мире по оси Z
 #define PARAM_WORLD_SIZE_Y              1      //количество чанков в мире по вертикали (оси Y)
-#define PARAM_CHUNK_SIZE                28      //Количество кубов, помещающихся в один чанк по x и z
-#define PARAM_CHUNK_HEIGHT              28      //Количество кубов, помещающихся в один чанк по вертикали
+#define PARAM_CHUNK_SIZE                32      //Количество кубов, помещающихся в один чанк по x и z
+#define PARAM_CHUNK_HEIGHT              32      //Количество кубов, помещающихся в один чанк по вертикали
 #define PARAM_BLOCK_SIZE                1.0     //Размерность блока
-#define PARAM_SECTIONS                  2       //Размерность секций.
+#define PARAM_SECTIONS                  4       //Размерность секций.
+
+//! Настройки клавиш
+#define KEYS_WIREWRAME                  KEY_F1
+#define KEYS_BOUNDING_BOX               KEY_F2
+#define KEYS_HALF_TRANSPARENT           KEY_F3
+#define KEYS_PLAYER_WALK_FWD            KEY_KEY_W
+#define KEYS_PLAYER_WALK_BCK            KEY_KEY_S
+#define KEYS_PLAYER_STRAFE_L            KEY_KEY_A
+#define KEYS_PLAYER_STRAFE_R            KEY_KEY_D
+#define KEYS_PLAYER_JUMP                KEY_SPACE
 
 //! Номера ошибок
 enum
