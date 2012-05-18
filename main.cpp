@@ -33,13 +33,6 @@ int main(int argc, char** argv)
 
     Di::cDiMeshBuffer *mesh[PARAM_WORLD_SIZE_X][PARAM_WORLD_SIZE_Z][PARAM_WORLD_SIZE_Y];
 
-    /*for (u32 x=0; x<PARAM_WORLD_SIZE_X; x++)
-        for (u32 z=0; z<PARAM_WORLD_SIZE_Z; z++)
-            for (u32 y=0; y<PARAM_WORLD_SIZE_Y; y++)
-            {
-                mesh[x][z][y] = new Di::cDiMeshBuffer(vector3di(x,y,z), &dev, &glMatrix, &flags);
-                mesh[x][z][y]->generateSphere(8,1,vector3di(7,7,7));
-            }*/
     //! Пробная генерация сферы во весь мир
     /*for (u32 x=0; x<PARAM_WORLD_SIZE_X; x++)
         for (u32 z=0; z<PARAM_WORLD_SIZE_Z; z++)
@@ -62,6 +55,7 @@ int main(int argc, char** argv)
     for (u32 x=0; x<PARAM_WORLD_SIZE_X; x++)
         for (u32 z=0; z<PARAM_WORLD_SIZE_Z; z++)
             mesh[x][z][0]->generateFromHeightMap(img,1.0f,vector2di(x*PARAM_CHUNK_SIZE,z*PARAM_CHUNK_SIZE));
+
     //mesh[0][0][0]->generateSphere(8,1,vector3di(7,7,7));
     //mesh[0][0][0]->generateSphere(5,0,vector3di(7,7,7));
     //mesh[0][0][1]->generateEllipse(8,8,8,vector3di(8,8,8));
@@ -89,36 +83,53 @@ int main(int argc, char** argv)
         }
     */
 
-    ITriangleSelector* selector = 0;
+    //Подготовка мешей
+    SMesh *surfaceMesh[PARAM_SECTIONS][PARAM_SECTIONS];
+    for (u32 x=0; x < PARAM_SECTIONS; x++)
+        for (u32 z=0; z < PARAM_SECTIONS; z++)
+            surfaceMesh[x][z] = new SMesh();
 
-    SMesh *surfaceMesh = new SMesh();
-    surfaceMesh->setHardwareMappingHint(EHM_STATIC);
-
+    //Заполнение мешей
     for (u32 x=0; x<PARAM_WORLD_SIZE_X; x++)
         for (u32 z=0; z<PARAM_WORLD_SIZE_Z; z++)
             for (u32 y=0; y<PARAM_WORLD_SIZE_Y; y++)
             {
                 mesh[x][z][y]->build();
-                surfaceMesh->addMeshBuffer(mesh[x][z][y]->mb_storage);
+                surfaceMesh[x/(PARAM_WORLD_SIZE_X/PARAM_SECTIONS)][z/(PARAM_WORLD_SIZE_X/PARAM_SECTIONS)]->addMeshBuffer(mesh[x][z][y]->mb_storage);
             }
 
-    IMeshSceneNode* node = dev.smgr->addMeshSceneNode(surfaceMesh);
+    //Подготовка узлов сцены
+    IMeshSceneNode* node[PARAM_SECTIONS][PARAM_SECTIONS];
+    for (u32 x=0; x < PARAM_SECTIONS; x++)
+        for (u32 z=0; z < PARAM_SECTIONS; z++)
+        {
+            node[x][z]= dev.smgr->addMeshSceneNode(surfaceMesh[x][z]);
 
-    selector = dev.smgr->createTriangleSelector(surfaceMesh, node);
-    node->setTriangleSelector(selector);
-    selector->drop();
+            //Высчитываем габаритный бокс ноды
+            vector3df minEdge = vector3df(PARAM_WORLD_SIZE_X/PARAM_SECTIONS*x*PARAM_CHUNK_SIZE-PARAM_BLOCK_SIZE,0,PARAM_WORLD_SIZE_Z/PARAM_SECTIONS*z*PARAM_CHUNK_SIZE-PARAM_BLOCK_SIZE);
+            core::aabbox3df bbox = core::aabbox3df(minEdge,minEdge + vector3df(PARAM_CHUNK_SIZE*(PARAM_WORLD_SIZE_X/PARAM_SECTIONS)+PARAM_BLOCK_SIZE,PARAM_CHUNK_SIZE*PARAM_WORLD_SIZE_Y,PARAM_CHUNK_SIZE*(PARAM_WORLD_SIZE_X/PARAM_SECTIONS)+PARAM_BLOCK_SIZE));
+            //Присваиваем полученный габиритный бокс ноде
+            node[x][z]->getMesh()->setBoundingBox(bbox);
 
-    // create skybox and skydome
+            //Добавляем ноду в список проверяемых для occlusion culling
+            //http://irrlicht.sourceforge.net/docutemp/example026.html
+            dev.driver->addOcclusionQuery(node[x][z],surfaceMesh[x][z]);
+
+            ITriangleSelector* selector = dev.smgr->createTriangleSelector(surfaceMesh[x][z], node[x][z]);
+            dev.metaSelector->addTriangleSelector(selector);
+            node[x][z]->setTriangleSelector(selector);
+            selector->drop();
+        }
+
+    // create skybox
 	dev.driver->setTextureCreationFlag(video::ETCF_CREATE_MIP_MAPS, false);
-
-	scene::ISceneNode* skybox=dev.smgr->addSkyBoxSceneNode(
+	dev.smgr->addSkyBoxSceneNode(
 		dev.driver->getTexture("textures/irrlicht2_up.jpg"),
 		dev.driver->getTexture("textures/irrlicht2_dn.jpg"),
 		dev.driver->getTexture("textures/irrlicht2_lf.jpg"),
 		dev.driver->getTexture("textures/irrlicht2_rt.jpg"),
 		dev.driver->getTexture("textures/irrlicht2_ft.jpg"),
 		dev.driver->getTexture("textures/irrlicht2_bk.jpg"));
-
 	dev.driver->setTextureCreationFlag(video::ETCF_CREATE_MIP_MAPS, true);
 
     //Billboard
@@ -134,7 +145,7 @@ int main(int argc, char** argv)
     camera->setTarget(vector3df(0,0,0));
     camera->setNearValue(0.1f);
     camera->setFarValue(200.0f);
-    ISceneNodeAnimator* camAnim = dev.smgr->createCollisionResponseAnimator(selector,camera,vector3df(0.5f,0.5f,0.5f),vector3df(0,0,0));
+    ISceneNodeAnimator* camAnim = dev.smgr->createCollisionResponseAnimator(dev.metaSelector,camera,vector3df(0.5f,0.5f,0.5f),vector3df(0,0,0));
     camera->addAnimator(camAnim);
     camAnim->drop();
 
@@ -144,48 +155,39 @@ int main(int argc, char** argv)
         //Обновление боундинг бокса мешбуффера
         if (flags.FMeshBoundingBoxReload)
         {
-            //Пересчитываем габаритные коробки всех мешбуферов
-            for (u32 i=0; i < node->getMesh()->getMeshBufferCount(); i++)
-                node->getMesh()->getMeshBuffer(i)->recalculateBoundingBox();
+            bool skip = false; //флаг пропуска операции. TRUE, если координаты не верны
+            int x = cUtils.getSection((int)camera->getAbsolutePosition().X);
+            int z = cUtils.getSection((int)camera->getAbsolutePosition().Z);
 
-            //Складываем получившиеся короба вместе, получая общий габарит
-            core::aabbox3df bbox;
-            for (u32 i=0; i < node->getMesh()->getMeshBufferCount(); i++)
-                bbox.addInternalBox(node->getMesh()->getMeshBuffer(i)->getBoundingBox());
+            if (x < 0 || x > PARAM_SECTIONS-1 || z <0 || z > PARAM_SECTIONS-1) skip = true;
 
-            //Присваиваем полученный габиритный бокс ноде
-            node->getMesh()->setBoundingBox(bbox);
-
-            //Обновление селектора. Потерял около часа, искав причину "необновления" боундинг бокса. Я нуб :(
-            selector = dev.smgr->createTriangleSelector(node->getMesh(), node);
-            node->setTriangleSelector(selector);
-            selector->drop();
-
-            //обновление аниматора камеры
-            //для этого ищем устаревший аниматор, удаляем его и заменяем новым
-            camAnim = dev.smgr->createCollisionResponseAnimator(selector,camera,vector3df(0.4f,0.4f,0.4f),vector3df(0,0,0));
-            list<ISceneNodeAnimator*>::ConstIterator it = camera->getAnimators().begin();
-            ISceneNodeAnimator* anim;
-            for (; it != camera->getAnimators().end(); ++it)
+            if (!skip)
             {
+                //Удаляем предыдущий селектор
+                dev.metaSelector->removeTriangleSelector(node[x][z]->getTriangleSelector());
+                //Обновление селектора. Потерял около часа, искав причину "необновления" боундинг бокса. Я нуб :(
+                ITriangleSelector* selector = dev.smgr->createTriangleSelector(node[x][z]->getMesh(), node[x][z]);
+                node[x][z]->setTriangleSelector(selector);
+                dev.metaSelector->addTriangleSelector(selector);
+                selector->drop();
 
-                if ((*it)->getType() == ESNAT_COLLISION_RESPONSE)
-                    anim = *it;
+                //обновление аниматора камеры
+                //для этого ищем устаревший аниматор, удаляем его и заменяем новым
+                camAnim = dev.smgr->createCollisionResponseAnimator(dev.metaSelector,camera,vector3df(0.4f,0.4f,0.4f),vector3df(0,0,0));
+                list<ISceneNodeAnimator*>::ConstIterator it = camera->getAnimators().begin();
+                ISceneNodeAnimator* anim;
+                for (; it != camera->getAnimators().end(); ++it)
+                {
+
+                    if ((*it)->getType() == ESNAT_COLLISION_RESPONSE)
+                        anim = *it;
+                }
+                camera->removeAnimator(anim);
+                camera->addAnimator(camAnim);
+                camAnim->drop();
+
+                flags.FMeshBoundingBoxReload = !flags.FMeshBoundingBoxReload;
             }
-            camera->removeAnimator(anim);
-            camera->addAnimator(camAnim);
-            camAnim->drop();
-
-            flags.FMeshBoundingBoxReload = !flags.FMeshBoundingBoxReload;
-        }
-
-        //Меняем параметры материала по нажатию кнопочек
-        node->setMaterialFlag(EMF_WIREFRAME,flags.FWireframe);
-        if (flags.FHalfTransparent)
-        {
-            node->setDebugDataVisible(EDS_HALF_TRANSPARENCY);
-        } else {
-            node->setDebugDataVisible(EDS_OFF);
         }
 
         //Проверяем не нужно ли где сгенерировать недостоющие плоскости
@@ -204,47 +206,65 @@ int main(int argc, char** argv)
         //! Главный цикл
         dev.driver->beginScene(true, true, SColor(0,100,100,100));
 
-            dev.smgr->drawAll();
-
-            core::line3d<f32> ray;
-            ray.start = camera->getAbsolutePosition();
-            ray.end = ray.start + (camera->getTarget() - ray.start).normalize() * 1000.0f;
-
-            // переменная под хранение точки пересещения
-            core::vector3df intersection;
-            // переменная под хранение треугольника с которым пересекся луч
-            core::triangle3df hitTriangle;
-
-            scene::ISceneNode * selectedSceneNode =
-                    dev.collMan->getSceneNodeAndCollisionPointFromRay(
-                                    ray,
-                                    intersection, // точка столкновения
-                                    hitTriangle, // полигон(треугольник) в котором точка столкновения
-                                    0, // определять столкновения только для нод с идентификатором IDFlag_IsPickable
-                                    0); // проверять относительно всей сцены (оставляем значение по умолчанию)
+            dev.step();
 
             //Обработка клавиш мыши. Задержка между нажатиями устанавливается параметром DEVICE_MOUSE_PRESS_DELAY
             if (dev.device->getTimer()->getTime() - receiver.mKeysTimer > DEVICE_MOUSE_PRESS_DELAY)
             {
-                if (flags.FRecMLBPressed) mesh[cUtils.getChunkX(intersection)][cUtils.getChunkZ(intersection)][cUtils.getChunkY(intersection,camera->getAbsolutePosition())]->blockDel(mesh[cUtils.getChunkX(intersection)][cUtils.getChunkZ(intersection)][cUtils.getChunkY(intersection,camera->getAbsolutePosition())]->getBlockPos(cUtils.transformBlockfromGlobal(intersection),camera->getAbsolutePosition()));
-                if (flags.FRecMRBPressed) mesh[cUtils.getChunkX(intersection)][cUtils.getChunkZ(intersection)][cUtils.getChunkY(intersection,camera->getAbsolutePosition())]->blockAdd(mesh[cUtils.getChunkX(intersection)][cUtils.getChunkZ(intersection)][cUtils.getChunkY(intersection,camera->getAbsolutePosition())]->getBlockPos(cUtils.transformBlockfromGlobal(intersection),camera->getAbsolutePosition()),intersection);
+                if (flags.FRecMLBPressed) mesh[cUtils.getChunkX(dev.selected.intersection)][cUtils.getChunkZ(dev.selected.intersection)][cUtils.getChunkY(dev.selected.intersection,camera->getAbsolutePosition())]->blockDel(mesh[cUtils.getChunkX(dev.selected.intersection)][cUtils.getChunkZ(dev.selected.intersection)][cUtils.getChunkY(dev.selected.intersection,camera->getAbsolutePosition())]->getBlockPos(cUtils.transformBlockfromGlobal(dev.selected.intersection),camera->getAbsolutePosition()));
+                if (flags.FRecMRBPressed) mesh[cUtils.getChunkX(dev.selected.intersection)][cUtils.getChunkZ(dev.selected.intersection)][cUtils.getChunkY(dev.selected.intersection,camera->getAbsolutePosition())]->blockAdd(mesh[cUtils.getChunkX(dev.selected.intersection)][cUtils.getChunkZ(dev.selected.intersection)][cUtils.getChunkY(dev.selected.intersection,camera->getAbsolutePosition())]->getBlockPos(cUtils.transformBlockfromGlobal(dev.selected.intersection),camera->getAbsolutePosition()),dev.selected.intersection);
 
                 receiver.dropFlags();
             }
 
             //Вывод данныъ матрицы выделеного чанка
-            if (flags.FMeshCheckMatrix) mesh[cUtils.getChunkX(intersection)][cUtils.getChunkZ(intersection)][cUtils.getChunkY(intersection,camera->getAbsolutePosition())]->checkBuffer();
+            if (flags.FMeshCheckMatrix) mesh[cUtils.getChunkX(dev.selected.intersection)][cUtils.getChunkZ(dev.selected.intersection)][cUtils.getChunkY(dev.selected.intersection,camera->getAbsolutePosition())]->checkBuffer();
+            //Меняем параметры материала по нажатию кнопочек
+            if (dev.selected.isSelected)
+            {
+                bool skip = false; //флаг пропуска операции. TRUE, если координаты не верны
+                int x = cUtils.getSection((int)camera->getAbsolutePosition().X);
+                int z = cUtils.getSection((int)camera->getAbsolutePosition().Z);
+                if (x < 0 || x > PARAM_SECTIONS-1 || z <0 || z > PARAM_SECTIONS-1) skip = true;
+                if (!skip)
+                {
+                    node[x][z]->setMaterialFlag(EMF_WIREFRAME,flags.FWireframe);
+                    if (flags.FHalfTransparent)
+                    {
+                        node[x][z]->setDebugDataVisible(EDS_HALF_TRANSPARENCY);
+                    } else {
+                        node[x][z]->setDebugDataVisible(EDS_OFF);
+                    }
+                    if (flags.FBoundingBox)
+                    {
+                        node[x][z]->setDebugDataVisible(EDS_BBOX_ALL);
+                    } else {
+                        node[x][z]->setDebugDataVisible(EDS_OFF);
+                    }
+                }
+            }
+
+            if (dev.device->getTimer()->getTime()-dev.timeNow>100)
+            {
+                dev.driver->runAllOcclusionQueries(false);
+                dev.driver->updateAllOcclusionQueries();
+                for (u32 x=0; x < PARAM_SECTIONS; x++)
+                    for (u32 z=0; z < PARAM_SECTIONS; z++)
+                        node[x][z]->setVisible(dev.driver->getOcclusionQueryResult(node[x][z])>0);
+                dev.timeNow=dev.device->getTimer()->getTime();
+            }
 
             stringw str;
             str += "ver."; str += AutoVersion::MAJOR; str += "."; str += AutoVersion::MINOR; str += "."; str += AutoVersion::BUILDS_COUNT; str += " | FPS: ";
             str += dev.driver->getFPS();
             str += " | Prim-es: "; str += dev.driver->getPrimitiveCountDrawn();
-            str += " | Chunk: "; str += cUtils.getChunkX(intersection); str += "/"; str += cUtils.getChunkZ(intersection); str+= "/"; str+= cUtils.getChunkY(intersection,camera->getAbsolutePosition());
+            str += " | Section: "; str += cUtils.getSection(camera->getAbsolutePosition().X); str += "/"; str += cUtils.getSection(camera->getAbsolutePosition().Z);
+            str += " | Chunk: "; str += cUtils.getChunkX(dev.selected.intersection); str += "/"; str += cUtils.getChunkZ(dev.selected.intersection); str+= "/"; str+= cUtils.getChunkY(dev.selected.intersection,camera->getAbsolutePosition());
 
             //Перемещение прицела на место курсора
-            if(selectedSceneNode)
+            if(dev.selected.isSelected)
             {
-                bill->setPosition(intersection);
+                bill->setPosition(dev.selected.intersection);
                 bill->setVisible(true);
             } else {
                 bill->setVisible(false);

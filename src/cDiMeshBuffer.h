@@ -345,6 +345,7 @@ namespace Di
                 //Получаем оригинал клонируемого меша
                 SMeshBuffer * buf = (SMeshBuffer*)cloneMeshBuffer(meshBuffer);
                 vector3df pos = vector3df(Id.X*PARAM_CHUNK_SIZE, Id.Y*PARAM_CHUNK_HEIGHT, Id.Z*PARAM_CHUNK_SIZE) + vector3df(x, y, z);
+                //vector3df pos = vector3df(x, y+Id.Y*PARAM_CHUNK_HEIGHT ,z);
                 m.makeIdentity();
                 m.setTranslation(pos);
                 m.setRotationDegrees(r);

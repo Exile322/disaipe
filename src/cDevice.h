@@ -29,9 +29,23 @@ namespace Di
             ISceneCollisionManager* collMan;
             cLogger* logger;
 
+            u32 timeNow;
+
+            IMetaTriangleSelector* metaSelector;
+
+            struct SSelected
+            {
+                bool isSelected;
+                ISceneNode* node;
+                // переменная под хранение точки пересещения
+                core::vector3df intersection;
+                // переменная под хранение треугольника с которым пересекся луч
+                core::triangle3df hitTriangle;
+            }selected;
+
             int init()
             {
-                device = createDevice(EDT_OPENGL, dimension2du(640, 480), 32, false, false, false, 0);
+                device = createDevice(EDT_OPENGL, dimension2du(1024, 768), 32, false, false, false, 0);
                 if (!device)  return ERR_DEVICE;
 
                 driver = device->getVideoDriver();
@@ -44,6 +58,10 @@ namespace Di
 
                 logger->init(device);
 
+                metaSelector = smgr->createMetaTriangleSelector();
+
+                timeNow = device->getTimer()->getTime();
+
                 if (DEBUG_INFO)
                 {
                     ostringstream ss; ss << "SYSTEM: DEVICE START\n\n";
@@ -52,6 +70,12 @@ namespace Di
                 }
 
                 return 0;
+            }
+
+            void step()
+            {
+                smgr->drawAll();
+                getSelected(smgr->getActiveCamera());
             }
 
             void closeDevice()
@@ -89,6 +113,23 @@ namespace Di
                 return 0;
             }
 
+            void getSelected(ICameraSceneNode* camera)
+            {
+                core::line3d<f32> ray;
+                ray.start = camera->getAbsolutePosition();
+                ray.end = ray.start + (camera->getTarget() - ray.start).normalize() * 1000.0f;
+
+                selected.node = collMan->getSceneNodeAndCollisionPointFromRay(
+                                    ray,
+                                    selected.intersection, // точка столкновения
+                                    selected.hitTriangle, // полигон(треугольник) в котором точка столкновения
+                                    0, // определять столкновения только для нод с идентификатором IDFlag_IsPickable
+                                    0); // проверять относительно всей сцены (оставляем значение по умолчанию)
+                if (selected.node)
+                    selected.isSelected = true;
+                else
+                    selected.isSelected = false;
+            }
         protected:
         private:
     };

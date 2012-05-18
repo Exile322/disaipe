@@ -17,6 +17,7 @@ namespace Di
 
                 FWireframe = false;
                 FHalfTransparent = false;
+                FBoundingBox = false;
             }
             virtual ~cFlags() {}
 
@@ -29,6 +30,7 @@ namespace Di
             //флаги материалов
             bool FWireframe;
             bool FHalfTransparent;
+            bool FBoundingBox;
 
             //флаги мешбуферов
             bool FMeshBoundingBoxReload;

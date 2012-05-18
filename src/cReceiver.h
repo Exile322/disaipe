@@ -103,6 +103,7 @@ namespace Di
             {
                 if (isKeyWasDown[KEY_KEY_W]) flags->FWireframe = !flags->FWireframe;
                 if (isKeyWasDown[KEY_KEY_H]) flags->FHalfTransparent = !flags->FHalfTransparent;
+                if (isKeyWasDown[KEY_KEY_B]) flags->FBoundingBox = !flags->FBoundingBox;
                 if (isKeyWasDown[KEY_KEY_C]) flags->FMeshCheckMatrix = true;
 
                 memset(isKeyWasDown,false,sizeof(isKeyWasDown));
